@@ -13,44 +13,51 @@ jobs:
       contents: write 
 
     steps:
-      - name: Baixar os arquivos do repositório
+      - name: Baixar os arquivos
         uses: actions/checkout@v4
 
-      - name: Testar se o site está no ar (via API)
+      - name: Testar se o site está no ar e salvar histórico
         run: |
-          # URL do site visual
           URL_SITE="https://ufg.sigaacaiu.com" 
-          # URL dos dados (API) que o site usa para saber se está online
           URL_API="https://ufg.sigaacaiu.com/api/status"
           
-          # Pega os códigos de resposta do servidor
           STATUS_SITE=$(curl -o /dev/null -s -w "%{http_code}\n" $URL_SITE)
           STATUS_API=$(curl -o /dev/null -s -w "%{http_code}\n" $URL_API)
-          
-          # Hora atual
           DATA=$(TZ="America/Sao_Paulo" date +"%d/%m/%Y às %H:%M:%S")
 
           CAIU=false
 
-          # 1. Se a interface visual explodir (diferente de 200, 301, 302)
           if [ "$STATUS_SITE" -ne 200 ] && [ "$STATUS_SITE" -ne 301 ] && [ "$STATUS_SITE" -ne 302 ]; then
             CAIU=true
           fi
 
-          # 2. Se a API de dados explodir (é isso que causa o erro na tela que você viu!)
           if [ "$STATUS_API" -ne 200 ]; then
             CAIU=true
           fi
 
-          # Grava o resultado no banco de dados (status.json)
+          # Define as variáveis para o JSON
           if [ "$CAIU" = true ]; then
-            echo "{\"online\": false, \"ultima_verificacao\": \"$DATA\"}" > status.json
+            ONLINE="false"
+            TXT="CAIU"
           else
-            echo "{\"online\": true, \"ultima_verificacao\": \"$DATA\"}" > status.json
+            ONLINE="true"
+            TXT="ONLINE"
           fi
 
-      - name: Salvar o novo status.json no GitHub
+          # Se o arquivo status.json não existir ou estiver vazio, cria uma base
+          if ! jq -e . status.json >/dev/null 2>&1; then
+            echo '{"online": false, "ultima_verificacao": "", "historico": []}' > status.json
+          fi
+          
+          # A mágica do histórico: Adiciona no topo da lista e guarda só os últimos 10
+          jq --arg date "$DATA" --arg txt "$TXT" --argjson on "$ONLINE" '
+            .online = $on | 
+            .ultima_verificacao = $date | 
+            .historico = ([{"data": $date, "status": $txt}] + (.historico // []))[:10]
+          ' status.json > temp.json && mv temp.json status.json
+
+      - name: Salvar no GitHub
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Robô: Verificando via API"
+          commit_message: "Robô: Atualizando status e histórico"
           file_pattern: 'status.json'
