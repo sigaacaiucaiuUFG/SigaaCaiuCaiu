@@ -2,29 +2,54 @@ name: Monitor Sigaacaiu
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Roda a cada 15 minutos
-  workflow_dispatch: # Permite que você clique em um botão para rodar manualmente
+    - cron: '*/5 * * * *' # Roda a cada 5 minutos
+  workflow_dispatch: # Permite que você rode manualmente clicando no botão no GitHub
 
 jobs:
   verificar_site:
     runs-on: ubuntu-latest
+    
+    # Garante que o robô tenha permissão para salvar (commitar) o arquivo modificado
+    permissions:
+      contents: write 
+
     steps:
       - name: Baixar os arquivos do repositório
         uses: actions/checkout@v4
 
-      - name: Testar se o site está no ar
+      - name: Testar se o site está no ar lendo a tela
         run: |
-          URL="https://ufg.sigaacaiu.com/" 
+          # URL baseada na imagem que você enviou
+          URL="https://ufg.sigaacaiu.com" 
           
+          # Baixa o conteúdo (HTML) da página silenciosamente
+          PAGINA=$(curl -s $URL)
+          
+          # Pega apenas o código de status HTTP (ex: 200, 404, 500)
           STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" $URL)
           
           # Pega a hora atual do Brasil (Goiânia/Brasília: UTC-3)
           DATA=$(TZ="America/Sao_Paulo" date +"%d/%m/%Y às %H:%M:%S")
 
-          if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 301 ] || [ "$STATUS_CODE" -eq 302 ]; then
-            echo "{\"online\": true, \"ultima_verificacao\": \"$DATA\"}" > status.json
-          else
+          # Começamos assumindo que NÃO caiu
+          CAIU=false
+
+          # Condição 1: Erro de servidor HTTP (Se não for 200 OK, nem redirecionamento 301/302)
+          if [ "$STATUS_CODE" -ne 200 ] && [ "$STATUS_CODE" -ne 301 ] && [ "$STATUS_CODE" -ne 302 ]; then
+            CAIU=true
+          fi
+
+          # Condição 2: Falso positivo (A página carregou status 200, mas tem o texto de erro na tela)
+          # O grep -iq procura o texto ignorando maiúsculas e minúsculas
+          if echo "$PAGINA" | grep -iq "tambem ta com problema"; then
+            CAIU=true
+          fi
+
+          # Grava o resultado no banco de dados (status.json)
+          if [ "$CAIU" = true ]; then
             echo "{\"online\": false, \"ultima_verificacao\": \"$DATA\"}" > status.json
+          else
+            echo "{\"online\": true, \"ultima_verificacao\": \"$DATA\"}" > status.json
           fi
 
       - name: Salvar o novo status.json no GitHub
