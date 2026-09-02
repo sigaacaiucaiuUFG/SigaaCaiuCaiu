@@ -1,0 +1,34 @@
+name: Monitor Sigaacaiu
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Roda a cada 15 minutos
+  workflow_dispatch: # Permite que você clique em um botão para rodar manualmente
+
+jobs:
+  verificar_site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar os arquivos do repositório
+        uses: actions/checkout@v4
+
+      - name: Testar se o site está no ar
+        run: |
+          URL="https://ufg.sigaacaiu.com/" 
+          
+          STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" $URL)
+          
+          # Pega a hora atual do Brasil (Goiânia/Brasília: UTC-3)
+          DATA=$(TZ="America/Sao_Paulo" date +"%d/%m/%Y às %H:%M:%S")
+
+          if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 301 ] || [ "$STATUS_CODE" -eq 302 ]; then
+            echo "{\"online\": true, \"ultima_verificacao\": \"$DATA\"}" > status.json
+          else
+            echo "{\"online\": false, \"ultima_verificacao\": \"$DATA\"}" > status.json
+          fi
+
+      - name: Salvar o novo status.json no GitHub
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Robô: Atualizando status do monitor"
+          file_pattern: 'status.json'
