@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O sigaacaiu caiu?</title>
+    <style>
+        body { 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; font-family: 'Arial', sans-serif; 
+            background: #111; color: white; flex-direction: column; text-align: center;
+        }
+        h1 { font-size: 2.5rem; margin-bottom: 20px; color: #ccc; }
+        #resposta { 
+            font-size: 8rem; font-weight: bold; padding: 20px 60px; 
+            border-radius: 20px; text-transform: uppercase; 
+        }
+        .online { background-color: #28a745; box-shadow: 0 0 40px #28a745; }
+        .offline { background-color: #dc3545; box-shadow: 0 0 40px #dc3545; animation: piscar 1s infinite; }
+        p { margin-top: 30px; font-size: 1.2rem; color: #888; }
+        @keyframes piscar { 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+    <h1>O site sigaacaiu caiu?</h1>
+    <div id="resposta">...</div>
+    <p>Última verificação: <span id="hora">Carregando...</span></p>
+
+    <script>
+        // O cache buster (t=...) impede que o navegador mostre um resultado antigo
+        fetch('status.json?t=' + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const div = document.getElementById('resposta');
+                document.getElementById('hora').innerText = data.ultima_verificacao;
+                
+                if (data.online) {
+                    div.innerText = "NÃO";
+                    div.className = "online";
+                } else {
+                    div.innerText = "SIM!";
+                    div.className = "offline";
+                }
+            })
+            .catch(err => {
+                document.getElementById('resposta').innerText = "???";
+                document.getElementById('hora').innerText = "Erro ao ler o status";
+            });
+    </script>
+</body>
+</html>
