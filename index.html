@@ -7,8 +7,9 @@
     <style>
         body { 
             display: flex; justify-content: center; align-items: center; 
-            height: 100vh; margin: 0; font-family: 'Arial', sans-serif; 
+            min-height: 100vh; margin: 0; font-family: 'Arial', sans-serif; 
             background: #111; color: white; flex-direction: column; text-align: center;
+            padding: 20px; box-sizing: border-box;
         }
         h1 { font-size: 2.5rem; margin-bottom: 20px; color: #ccc; }
         #resposta { 
@@ -19,6 +20,23 @@
         .offline { background-color: #dc3545; box-shadow: 0 0 40px #dc3545; animation: piscar 1s infinite; }
         p { margin-top: 30px; font-size: 1.2rem; color: #888; }
         @keyframes piscar { 50% { opacity: 0.5; } }
+        
+        /* Estilos do Histórico */
+        .historico-box {
+            margin-top: 40px;
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .historico-box h3 { margin-top: 0; color: #aaa; font-size: 1.2rem; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        ul { list-style: none; padding: 0; margin: 0; text-align: left; }
+        li { padding: 10px 0; border-bottom: 1px solid #333; display: flex; justify-content: space-between; font-size: 1rem; color: #ddd; }
+        li:last-child { border-bottom: none; }
+        .status-badge { font-weight: bold; padding: 3px 8px; border-radius: 5px; font-size: 0.8rem; }
+        .badge-online { background-color: #28a745; color: white; }
+        .badge-caiu { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body>
@@ -26,20 +44,50 @@
     <div id="resposta">...</div>
     <p>Última verificação: <span id="hora">Carregando...</span></p>
 
+    <!-- Caixa do Histórico -->
+    <div class="historico-box">
+        <h3>Últimas Verificações</h3>
+        <ul id="lista-historico">
+            <li>Carregando histórico...</li>
+        </ul>
+    </div>
+
     <script>
-        // O cache buster (t=...) impede que o navegador mostre um resultado antigo
         fetch('status.json?t=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
                 const div = document.getElementById('resposta');
-                document.getElementById('hora').innerText = data.ultima_verificacao;
+                document.getElementById('hora').innerText = data.ultima_verificacao || "Ainda não verificado";
                 
+                // Atualiza o bloco principal
                 if (data.online) {
                     div.innerText = "NÃO";
                     div.className = "online";
                 } else {
                     div.innerText = "SIM!";
                     div.className = "offline";
+                }
+
+                // Atualiza a lista de histórico
+                const ul = document.getElementById('lista-historico');
+                if (data.historico && data.historico.length > 0) {
+                    ul.innerHTML = ''; // Limpa a lista padrão
+                    data.historico.forEach(item => {
+                        const li = document.createElement('li');
+                        
+                        const spanData = document.createElement('span');
+                        spanData.innerText = item.data;
+                        
+                        const spanStatus = document.createElement('span');
+                        spanStatus.innerText = item.status;
+                        spanStatus.className = 'status-badge ' + (item.status === 'ONLINE' ? 'badge-online' : 'badge-caiu');
+                        
+                        li.appendChild(spanData);
+                        li.appendChild(spanStatus);
+                        ul.appendChild(li);
+                    });
+                } else {
+                    ul.innerHTML = '<li>Nenhum histórico disponível ainda.</li>';
                 }
             })
             .catch(err => {
