@@ -1,7 +1,11 @@
 {
   "online": false,
-  "ultima_verificacao": "06/09/2026 às 15:53:34",
+  "ultima_verificacao": "06/09/2026 às 16:09:12",
   "historico": [
+    {
+      "data": "06/09/2026 às 16:09:12",
+      "status": "CAIU"
+    },
     {
       "data": "06/09/2026 às 15:53:34",
       "status": "CAIU"
@@ -36,10 +40,6 @@
     },
     {
       "data": "06/09/2026 às 13:50:42",
-      "status": "CAIU"
-    },
-    {
-      "data": "06/09/2026 às 13:40:11",
       "status": "CAIU"
     }
   ]
